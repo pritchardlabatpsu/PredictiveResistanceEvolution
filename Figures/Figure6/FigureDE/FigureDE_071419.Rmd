@@ -1,0 +1,1147 @@
+---
+title: "TransitionTransversion2"
+author: "Scott Leighow"
+date: "June 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+setwd("C:/Users/Scott/Box Sync/MutBias/Resubmit/Figures/Figure6/FigureDE/")
+library(ggplot2)
+library(plotly)
+```
+
+## Import/QC data
+
+```{r}
+
+# AR in PCa
+AR.df = read.csv("ARSummary2.csv",stringsAsFactors=F)
+AR.df$gene = "AR"
+AR.df = AR.df[,c(ncol(AR.df),1:(ncol(AR.df)-1))]
+
+## Remove all multi-step mutations
+AR.df = AR.df[AR.df$mut.codon!="multsub",]
+AR.df$rel.freq = AR.df$freq/sum(AR.df$freq)
+
+# Filter for identifiable transitions/transversions
+AR.TsTv = AR.df[AR.df$class!="?",]
+
+# Filter for identifiable substitutions
+AR.mut = AR.df[AR.df$mut.codon!="?",]
+AR.mut$tri.sub = paste(AR.mut$init.3nuc,AR.mut$pyr.sub,sep=".")
+AR.mut$init.pyr = substr(AR.mut$pyr.sub,1,1)
+
+# ESR1 in BCa
+ESR1.df = read.csv("ESR1Summary.csv",stringsAsFactors=F)
+ESR1.df$gene = "ESR1"
+ESR1.df = ESR1.df[,c(ncol(ESR1.df),1:(ncol(ESR1.df)-1))]
+ESR1.df = ESR1.df[ESR1.df$mut.codon!="multsub",]
+ESR1.df$rel.freq = ESR1.df$freq/sum(ESR1.df$freq)
+
+ESR1.TsTv = ESR1.df[ESR1.df$class!="?",]
+
+ESR1.mut = ESR1.df[ESR1.df$mut.codon!="?",]
+ESR1.mut$tri.sub = paste(ESR1.mut$init.3nuc,ESR1.mut$pyr.sub,sep=".")
+ESR1.mut$init.pyr = substr(ESR1.mut$pyr.sub,1,1)
+
+# KIT in GIST
+KIT.df = read.csv("GISTSummary3.csv",stringsAsFactors=F)
+KIT.df$gene = "KIT"
+KIT.df = KIT.df[,c(ncol(KIT.df),1:(ncol(KIT.df)-1))]
+KIT.df = KIT.df[KIT.df$mut.codon!="multsub",]
+KIT.df$rel.freq = KIT.df$freq/sum(KIT.df$freq)
+
+KIT.TsTv = KIT.df[KIT.df$class!="?",]
+
+KIT.mut = KIT.df[KIT.df$mut.codon!="?",]
+KIT.mut$tri.sub = paste(KIT.mut$init.3nuc,KIT.mut$pyr.sub,sep=".")
+KIT.mut$init.pyr = substr(KIT.mut$pyr.sub,1,1)
+
+# Combine data
+tot.df = rbind(AR.df,ESR1.df,KIT.df)
+tot.df$rel.freq = tot.df$freq/sum(tot.df$freq)
+
+tot.TsTv = rbind(AR.TsTv,ESR1.TsTv,KIT.TsTv)
+tot.TsTv$rel.freq = tot.TsTv$freq/sum(tot.TsTv$freq)
+
+tot.mut = rbind(AR.mut,ESR1.mut,KIT.mut)
+tot.mut$rel.freq = tot.mut$freq/sum(tot.mut$freq)
+
+# # Remove all multi-step mutations
+# tot.df = tot.df[tot.df$mut.codon!="multsub",]
+# tot.df$rel.freq = tot.df$freq/sum(tot.df$freq)
+# 
+# # Filter for identifiable transitions/transversions
+# tot.TsTv = tot.df[tot.df$class!="?",]
+# 
+# # Filter for identifiable mutations
+# tot.mut = tot.df[tot.df$mut.codon!="?",]
+# tot.mut$tri.sub = paste(tot.mut$init.3nuc,tot.mut$pyr.sub,sep=".")
+# tot.mut$init.pyr = substr(tot.mut$pyr.sub,1,1)
+
+```
+
+## Allele distributions
+
+```{r}
+
+# Transitions/transversions
+
+tot.TsTv.r = tot.TsTv[order(tot.TsTv$freq,decreasing=T),]
+tot.TsTv.r$x = 1:nrow(tot.TsTv.r)
+
+ggplot(tot.TsTv.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Class",labels=c("Transition","Transversion"))+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )
+
+# Pyrmidine substitutions
+
+tot.mut.r = tot.mut[order(tot.mut$freq,decreasing=T),]
+tot.mut.r$x = 1:nrow(tot.mut.r)
+
+ggplot(tot.mut.r[tot.mut.r$rel.freq>0,],aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle("Resistance Allele Distribution:\nKIT, AR, and ESR1\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    # plot.title=element_text(size=24,face="bold",hjust=0.5),
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+ggsave("TotResDist1.png",width=6.5,height=6)
+
+# Sense strand substitutions
+
+ggplot(tot.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=nuc.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Sense Substitutions")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.75),
+    legend.text=element_text(size=16,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=guide_legend(nrow=3))
+
+# Trinucleotide context
+
+ggplot(tot.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub,color=init.3nuc),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine Substitution")+
+  scale_color_discrete("Trinucleotide Context")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=12,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.6),
+    legend.text=element_text(size=10,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(
+    fill=guide_legend(nrow=2),
+    color=guide_legend(nrow=5)
+  )
+
+
+```
+
+## Resistance mutational signature
+
+```{r}
+
+# Transitions/transversions
+
+Ts.freq = sum(tot.TsTv$rel.freq[tot.TsTv$class=="Ts"])
+Tv.freq = sum(tot.TsTv$rel.freq[tot.TsTv$class=="Tv"])
+
+TsTv.freq = data.frame(class=c("Ts","Tv"),rel.freq=c(Ts.freq,Tv.freq))
+ggplot(TsTv.freq,aes(x=class,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  ggtitle("Transition/Transversion Mutational Signature")+
+  scale_x_discrete(labels=c("Transitions","Transversions"))+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Pyrmidine substitutions
+
+pyr.tab = table(tot.mut$pyr.sub)
+pyr.subs = names(pyr.tab)
+pyr.freq = pyr.tab
+for (i in 1:length(pyr.tab)) {
+  pyr.freq[i] = sum(tot.mut$rel.freq[tot.mut$pyr.sub==names(pyr.tab)[i]])
+}
+
+pyr.freq.df = as.data.frame(pyr.freq)
+colnames(pyr.freq.df) = c("pyr.sub","rel.freq")
+
+ggplot(pyr.freq.df,aes(x=pyr.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/6,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  ggtitle("Pyrmidine Mutational Signature")+
+  scale_x_discrete(labels=pyr.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Sense strand substitutions
+
+sns.tab = table(tot.mut$nuc.sub)
+sns.subs = names(sns.tab)
+sns.freq = sns.tab
+for (i in 1:length(sns.tab)) {
+  sns.freq[i] = sum(tot.mut$rel.freq[tot.mut$nuc.sub==names(sns.tab)[i]])
+}
+
+sns.freq.df = as.data.frame(sns.freq)
+colnames(sns.freq.df) = c("sns.sub","rel.freq")
+
+ggplot(sns.freq.df,aes(x=sns.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/12,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=sns.sub),stat="identity")+
+  ggtitle("Sense Strand Mutational Signature")+
+  scale_x_discrete(labels=sns.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Trinucleotide
+
+# Vector of all 96 subs
+tri.nuc.df = expand.grid(pos3 = c("A","C","T","G"),
+                       pos2 = c("C","T"),
+                       pos1 = c("A","C","T","G"))
+tri.nuc.df = tri.nuc.df[,3:1]
+tri.nucs = paste(tri.nuc.df$pos1,tri.nuc.df$pos2,tri.nuc.df$pos3,sep="")
+
+tri.sub.df = expand.grid(tri.nuc=tri.nucs,pyr.sub=pyr.subs)
+tri.sub.df$tri.pyr = substr(tri.sub.df$tri.nuc,2,2)
+tri.sub.df$pyr.pyr = substr(tri.sub.df$pyr.sub,1,1)
+tri.sub.df = tri.sub.df[tri.sub.df$tri.pyr==tri.sub.df$pyr.pyr,]
+tri.subs = paste(tri.sub.df$tri.nuc,tri.sub.df$pyr.sub,sep=".")
+
+tri.tab = table(tot.mut$tri.sub)
+# fill in zero counts
+tri.tab = tri.tab[tri.subs]
+names(tri.tab) = tri.subs
+tri.tab[is.na(tri.tab)] = 0
+
+tri.freq = tri.tab
+for (i in 1:length(tri.tab)) {
+  tri.freq[i] = sum(tot.mut$rel.freq[tot.mut$tri.sub==names(tri.tab)[i]])
+}
+
+tri.freq.df = as.data.frame(tri.freq)
+colnames(tri.freq.df) = c("tri.sub","rel.freq")
+tri.freq.df$init.3nuc = substr(tri.freq.df$tri.sub,1,3)
+tri.freq.df$init.pyr = substr(tri.freq.df$tri.sub,2,2)
+tri.freq.df$pyr.sub = substr(tri.freq.df$tri.sub,5,6)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="C",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="T",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+```
+
+### Does this mutational signature differ from expected distribution under null models?
+
+## Pyrmidine substitutions: null model - control for amino acid substitutions
+
+```{r}
+
+set.seed(5)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.subs
+
+temp.df = tot.mut[,c("pyr.sub","rel.freq")]
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.subs,nrow(temp.df),replace=T,prob=c(68,76,58,64,58,68))
+  
+  for (j in 1:length(pyr.subs)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$rel.freq[temp.df$pyr.sub==pyr.subs[j]])
+    
+  }
+  
+}
+
+temp.df.r = temp.df[order(temp.df$rel.freq,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$rel.freq>0,],aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle("Resistance Allele Distribution:\nKIT, AR, and ESR1\nNull Model Simulation Example")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+ggsave("TotResNullDist.png",width=6.5,height=6)
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = as.vector(pyr.freq.df$rel.freq)
+names(pyr.obs) = pyr.freq.df$pyr.sub
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs) #0.059
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=550,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle("Null Model Pyrmidine Substitution:\nKIT, AR, and ESR1")+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+ggsave("TotMahalnobisHist.png",width=6.5,height=6)
+
+pca = prcomp(rbind(pyr.mat,pyr.obs[1:5]),scale=F)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC3),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+# sim.pca = pca.df
+# sim.pca$res = "sim"
+# obs.pca = as.data.frame(pca.obs)
+# obs.pca$res = "obs"
+# pca.cmplt = rbind(sim.pca,obs.pca)
+
+write.table(pca.df,"totPCA.csv",row.names=F,col.names=F,sep=",")
+write.table(pca.obs,"totPCAobs.csv",row.names=F,col.names=F,sep=",")
+
+# plot_ly(pca.cmplt, x = ~PC1, y = ~PC2, z = ~PC3,color=~res, colors = c('red','gray'),opacity=0.4) %>%
+#   add_markers() %>%
+#   layout(scene = list(xaxis = list(title = 'PC1'),
+#                      yaxis = list(title = 'PC2'),
+#                      zaxis = list(title = 'PC3')))
+
+```
+
+# Positive Control: ABL
+
+## Import/QC Data
+
+```{r}
+
+ABL.df = read.csv("ABLSummary2.csv",stringsAsFactors=F)
+ABL.df$gene = "ABL"
+ABL.df = ABL.df[,c(ncol(ABL.df),1:(ncol(ABL.df)-1))]
+
+ABL.df = ABL.df[ABL.df$mut.codon!="multsub",]
+ABL.df$rel.freq = ABL.df$freq/sum(ABL.df$freq)
+
+ABL.TsTv = ABL.df[ABL.df$class!="?",]
+
+ABL.mut = ABL.df[ABL.df$mut.codon!="?",]
+ABL.mut$tri.sub = paste(ABL.mut$init.3nuc,ABL.mut$pyr.sub,sep=".")
+ABL.mut$init.pyr = substr(ABL.mut$pyr.sub,1,1)
+
+```
+
+## ABL Allele distributions
+
+```{r}
+
+# Transitions/transversions
+
+ABL.TsTv.r = ABL.TsTv[order(ABL.TsTv$freq,decreasing=T),]
+ABL.TsTv.r$x = 1:nrow(ABL.TsTv.r)
+
+ggplot(ABL.TsTv.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Class",labels=c("Transition","Transversion"))+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )
+
+# Pyrmidine substitutions
+
+ABL.mut.r = ABL.mut[order(ABL.mut$freq,decreasing=T),]
+ABL.mut.r$x = 1:nrow(ABL.mut.r)
+
+ggplot(ABL.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle("Resistance Allele Distribution:\nABL")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+ggsave("ABLResDist.png",width=6.5,height=6)
+
+# Sense strand substitutions
+
+ggplot(ABL.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=nuc.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Sense Substitutions")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.75),
+    legend.text=element_text(size=16,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=guide_legend(nrow=3))
+
+# Trinucleotide context
+
+ggplot(ABL.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub,color=init.3nuc),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine Substitution")+
+  scale_color_discrete("Trinucleotide Context")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=12,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.6),
+    legend.text=element_text(size=10,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(
+    fill=guide_legend(nrow=2),
+    color=guide_legend(nrow=5)
+  )
+
+
+```
+
+```{r}
+
+# Transitions/transversions
+
+Ts.freq = sum(ABL.TsTv$rel.freq[ABL.TsTv$class=="Ts"])
+Tv.freq = sum(ABL.TsTv$rel.freq[ABL.TsTv$class=="Tv"])
+
+TsTv.freq = data.frame(class=c("Ts","Tv"),rel.freq=c(Ts.freq,Tv.freq))
+ggplot(TsTv.freq,aes(x=class,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  ggtitle("Transition/Transversion Mutational Signature")+
+  scale_x_discrete(labels=c("Transitions","Transversions"))+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Pyrmidine substitutions
+
+pyr.tab = table(ABL.mut$pyr.sub)
+pyr.subs = names(pyr.tab)
+pyr.freq = pyr.tab
+for (i in 1:length(pyr.tab)) {
+  pyr.freq[i] = sum(ABL.mut$rel.freq[ABL.mut$pyr.sub==names(pyr.tab)[i]])
+}
+
+pyr.freq.df = as.data.frame(pyr.freq)
+colnames(pyr.freq.df) = c("pyr.sub","rel.freq")
+
+ggplot(pyr.freq.df,aes(x=pyr.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/6,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  ggtitle("Pyrmidine Mutational Signature")+
+  scale_x_discrete(labels=pyr.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Sense strand substitutions
+
+sns.tab = table(ABL.mut$sns.sub)
+# fill in zero counts
+sns.tab = sns.tab[sns.subs]
+names(sns.tab) = sns.subs
+sns.tab[is.na(sns.tab)] = 0
+
+sns.freq = sns.tab
+for (i in 1:length(sns.tab)) {
+  sns.freq[i] = sum(ABL.mut$rel.freq[ABL.mut$nuc.sub==names(sns.tab)[i]])
+}
+
+sns.freq.df = as.data.frame(sns.freq)
+colnames(sns.freq.df) = c("sns.sub","rel.freq")
+
+ggplot(sns.freq.df,aes(x=sns.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/12,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=sns.sub),stat="identity")+
+  ggtitle("Sense Strand Mutational Signature")+
+  scale_x_discrete(labels=sns.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Trinucleotide
+
+tri.tab = table(ABL.mut$tri.sub)
+# fill in zero counts
+tri.tab = tri.tab[tri.subs]
+names(tri.tab) = tri.subs
+tri.tab[is.na(tri.tab)] = 0
+
+tri.freq = tri.tab
+for (i in 1:length(tri.tab)) {
+  tri.freq[i] = sum(ABL.mut$rel.freq[ABL.mut$tri.sub==names(tri.tab)[i]])
+}
+
+tri.freq.df = as.data.frame(tri.freq)
+colnames(tri.freq.df) = c("tri.sub","rel.freq")
+tri.freq.df$init.3nuc = substr(tri.freq.df$tri.sub,1,3)
+tri.freq.df$init.pyr = substr(tri.freq.df$tri.sub,2,2)
+tri.freq.df$pyr.sub = substr(tri.freq.df$tri.sub,5,6)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="C",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="T",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+```
+
+## ABL: Pyrmidine substitutions - control for amino acid substitutions
+
+```{r}
+
+set.seed(5)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.subs
+
+temp.df = ABL.mut[,c("pyr.sub","rel.freq")]
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.subs,nrow(temp.df),replace=T,prob=c(68,76,58,64,58,68))
+  
+  for (j in 1:length(pyr.subs)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$rel.freq[temp.df$pyr.sub==pyr.subs[j]])
+    
+  }
+  
+}
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = as.vector(pyr.freq.df$rel.freq)
+names(pyr.obs) = pyr.freq.df$pyr.sub
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs) #0.055
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=525,yend=125),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=625,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle("Null Model Pyrmidine Substitution:\nABL")+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+ggsave("ABLMahalanobisHist.png",width=6.5,height=6)
+
+pca = prcomp(pyr.mat,scale=T)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC2),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+write.table(pca.df,"ABLPCA.csv",row.names=F,col.names=F,sep=",")
+write.table(pca.obs,"ABLPCAobs.csv",row.names=F,col.names=F,sep=",")
+
+```
+
+# Negative Control: EGFR
+
+## Import/QC Data
+
+```{r}
+
+EGFR.df = read.csv("EGFRSummary.csv",stringsAsFactors=F)
+EGFR.df$gene = "EGFR"
+EGFR.df = EGFR.df[,c(ncol(EGFR.df),1:(ncol(EGFR.df)-1))]
+
+EGFR.df = EGFR.df[EGFR.df$mut.codon!="multsub",]
+EGFR.df$rel.freq = EGFR.df$freq/sum(EGFR.df$freq)
+
+EGFR.TsTv = EGFR.df[EGFR.df$class!="?",]
+
+EGFR.mut = EGFR.df[EGFR.df$mut.codon!="?",]
+EGFR.mut$tri.sub = paste(EGFR.mut$init.3nuc,EGFR.mut$pyr.sub,sep=".")
+EGFR.mut$init.pyr = substr(EGFR.mut$pyr.sub,1,1)
+
+```
+
+## EGFR Allele distributions
+
+```{r}
+
+# Transitions/transversions
+
+EGFR.TsTv.r = EGFR.TsTv[order(EGFR.TsTv$freq,decreasing=T),]
+EGFR.TsTv.r$x = 1:nrow(EGFR.TsTv.r)
+
+ggplot(EGFR.TsTv.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Class",labels=c("Transition","Transversion"))+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )
+
+# Pyrmidine substitutions
+
+EGFR.mut.r = EGFR.mut[order(EGFR.mut$freq,decreasing=T),]
+EGFR.mut.r$x = 1:nrow(EGFR.mut.r)
+EGFR.mut.r$pyr.sub = factor(EGFR.mut.r$pyr.sub,levels=pyr.subs)
+
+ggplot(EGFR.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"),drop=F)+
+  ggtitle("Resistance Allele Distribution:\nEGFR")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+ggsave("EGFRResDist.png",width=6.5,height=6)
+
+# Sense strand substitutions
+
+ggplot(EGFR.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=nuc.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Sense Substitutions")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.75),
+    legend.text=element_text(size=16,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=guide_legend(nrow=3))
+
+# Trinucleotide context
+
+ggplot(EGFR.mut.r,aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub,color=init.3nuc),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine Substitution")+
+  scale_color_discrete("Trinucleotide Context")+
+  ggtitle("Resistance Allele Distribution:\nObserved")+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=12,face="bold"),
+    legend.title.align=0.5,
+    legend.position=c(0.6,0.6),
+    legend.text=element_text(size=10,face="bold"),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(
+    fill=guide_legend(nrow=2),
+    color=guide_legend(nrow=5)
+  )
+
+
+```
+
+```{r}
+
+# Transitions/transversions
+
+Ts.freq = sum(EGFR.TsTv$rel.freq[EGFR.TsTv$class=="Ts"])
+Tv.freq = sum(EGFR.TsTv$rel.freq[EGFR.TsTv$class=="Tv"])
+
+TsTv.freq = data.frame(class=c("Ts","Tv"),rel.freq=c(Ts.freq,Tv.freq))
+ggplot(TsTv.freq,aes(x=class,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  ggtitle("Transition/Transversion Mutational Signature")+
+  scale_x_discrete(labels=c("Transitions","Transversions"))+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Pyrmidine substitutions
+
+pyr.tab = table(EGFR.mut$pyr.sub)
+# fill in zero counts
+pyr.tab = pyr.tab[pyr.subs]
+names(pyr.tab) = pyr.subs
+pyr.tab[is.na(pyr.tab)] = 0
+
+pyr.freq = pyr.tab
+for (i in 1:length(pyr.tab)) {
+  pyr.freq[i] = sum(EGFR.mut$rel.freq[EGFR.mut$pyr.sub==names(pyr.tab)[i]])
+}
+
+pyr.freq.df = as.data.frame(pyr.freq)
+colnames(pyr.freq.df) = c("pyr.sub","rel.freq")
+
+ggplot(pyr.freq.df,aes(x=pyr.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/6,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  ggtitle("Pyrmidine Mutational Signature")+
+  scale_x_discrete(labels=pyr.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Sense strand substitutions
+
+sns.tab = table(EGFR.mut$sns.sub)
+# fill in zero counts
+sns.tab = sns.tab[sns.subs]
+names(sns.tab) = sns.subs
+sns.tab[is.na(sns.tab)] = 0
+
+sns.freq = sns.tab
+for (i in 1:length(sns.tab)) {
+  sns.freq[i] = sum(EGFR.mut$rel.freq[EGFR.mut$nuc.sub==names(sns.tab)[i]])
+}
+
+sns.freq.df = as.data.frame(sns.freq)
+colnames(sns.freq.df) = c("sns.sub","rel.freq")
+
+ggplot(sns.freq.df,aes(x=sns.sub,y=rel.freq))+theme_bw()+
+  geom_hline(yintercept=1/12,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(aes(fill=sns.sub),stat="identity")+
+  ggtitle("Sense Strand Mutational Signature")+
+  scale_x_discrete(labels=sns.subs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    legend.position=c(0.8,0.8),
+    legend.background = element_rect(fill="gray85")
+  )+
+  guides(fill=F)
+
+## Trinucleotide
+
+tri.tab = table(EGFR.mut$tri.sub)
+# fill in zero counts
+tri.tab = tri.tab[tri.subs]
+names(tri.tab) = tri.subs
+tri.tab[is.na(tri.tab)] = 0
+
+tri.freq = tri.tab
+for (i in 1:length(tri.tab)) {
+  tri.freq[i] = sum(EGFR.mut$rel.freq[EGFR.mut$tri.sub==names(tri.tab)[i]])
+}
+
+tri.freq.df = as.data.frame(tri.freq)
+colnames(tri.freq.df) = c("tri.sub","rel.freq")
+tri.freq.df$init.3nuc = substr(tri.freq.df$tri.sub,1,3)
+tri.freq.df$init.pyr = substr(tri.freq.df$tri.sub,2,2)
+tri.freq.df$pyr.sub = substr(tri.freq.df$tri.sub,5,6)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="C",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+ggplot()+theme_bw()+
+  geom_hline(yintercept=1/96,color="gray",linetype="dashed",size=1.5)+
+  geom_bar(data=tri.freq.df[tri.freq.df$init.pyr=="T",],aes(x=init.3nuc,y=rel.freq,fill=pyr.sub),stat="identity")+
+  facet_grid(.~pyr.sub)+
+  # scale_x_discrete(labels=c())+
+  ggtitle("Trinucleotide Mutational Signature")+
+  # scale_x_discrete(labels=tri.nucs)+
+  xlab("")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=14),
+    axis.text.x=element_text(angle=90),
+    legend.title=element_text(size=18,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=16,face="bold"),
+    # strip.background=element_blank(),
+    strip.text=element_text(size=12,face="bold")
+  )+
+  guides(fill=F)
+
+```
+
+
+## EGFR: Pyrmidine substitutions - control for amino acid substitutions
+
+```{r}
+
+set.seed(5)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.subs
+
+temp.df = EGFR.mut[,c("pyr.sub","rel.freq")]
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.subs,nrow(temp.df),replace=T,prob=c(68,76,58,64,58,68))
+  
+  for (j in 1:length(pyr.subs)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$rel.freq[temp.df$pyr.sub==pyr.subs[j]])
+    
+  }
+  
+}
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = as.vector(pyr.freq.df$rel.freq)
+names(pyr.obs) = pyr.freq.df$pyr.sub
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs) #0.055
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=1200,yend=1050),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=1400,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle("Null Model Pyrmidine Substitution:\nEGFR")+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )+
+  ylim(0,1550)
+
+ggsave("EGFRMahalanobistDist.png",width=6.5,height=6)
+
+pca = prcomp(pyr.mat,scale=T)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC2),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+write.table(pca.df,"EGFRPCA.csv",row.names=F,col.names=F,sep=",")
+write.table(pca.obs,"EGFRPCAobs.csv",row.names=F,col.names=F,sep=",")
+
+```
