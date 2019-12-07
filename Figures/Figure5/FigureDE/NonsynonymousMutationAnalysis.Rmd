@@ -1,0 +1,129 @@
+---
+title: "NonsynonymousMutationAnalysis"
+author: "Scott Leighow"
+date: "November 22, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+setwd("C:/Users/Scott/Box Sync/MutBias/Reresubmit/Figures/Figure6/FigureDE/")
+library(readtext)
+cod.tbl = read.csv("codtable.csv",stringsAsFactors=F)
+bps = c("a","c","g","t")
+```
+
+## Analyze for frequency of nonsynonymous transitions
+
+```{r}
+
+summary.df = data.frame(gene = c("AR","ESR1","KIT","ABL","ALK","EGFR"),
+                        cod.frst = c(702,329,559,244,1152,747),
+                        cod.lst = c(919,546,829,459,1269,854),stringsAsFactors=F)
+
+for (k in 1:nrow(summary.df)) {
+  
+  gene = summary.df$gene[k]
+  cod.frst = summary.df$cod.frst[k]
+  cod.lst = summary.df$cod.lst[k]
+
+  CDS.file = paste(gene,"_CDS.txt",sep="")
+  CDS = readChar(CDS.file,file.info(CDS.file)$size)
+  CDS.vec = strsplit(CDS,split="")[[1]]
+  
+  trans.file = paste(gene,"_translated.txt",sep="")
+  trans = readChar(trans.file,file.info(trans.file)$size)
+  trans.vec = strsplit(trans,split="")[[1]]
+  
+  codon.df = data.frame(codon=rep(1:length(trans.vec),each=9),init.aa=rep(trans.vec,each=9),stringsAsFactors=F)
+  codon.df$cod.pos = rep(rep(1:3,each=3),times=length(trans.vec))
+  codon.df$init.bp = rep(CDS.vec,each=3)
+  
+  for (i in 1:length(CDS.vec)) {
+    
+    row.idx = (3*(i-1)+1):(3*i)
+    init.bp = unique(codon.df$init.bp[row.idx])
+    mut.bps = bps[bps!=init.bp]
+    codon.df$mut.bp[row.idx] = mut.bps
+    
+    cod.idx = codon.df$codon[row.idx[1]]
+    cod.pos = codon.df$cod.pos[row.idx[1]]
+    init.cod = c(codon.df$init.bp[codon.df$codon==cod.idx&codon.df$cod.pos==1][1],
+                 codon.df$init.bp[codon.df$codon==cod.idx&codon.df$cod.pos==2][1],
+                 codon.df$init.bp[codon.df$codon==cod.idx&codon.df$cod.pos==3][1])
+    init.cod = toupper(init.cod)
+    for (j in 1:3) {
+      mut.cod = init.cod
+      mut.cod[cod.pos] = toupper(mut.bps[j])
+      mut.aa = cod.tbl$AA1[cod.tbl$cod1==mut.cod[1]&cod.tbl$cod2==mut.cod[2]&cod.tbl$cod3==mut.cod[3]]
+      codon.df$mut.aa[row.idx[j]] = mut.aa
+    }
+    
+  }
+  
+  # Remove synonymous and nonsense mutations
+  full.df = codon.df[codon.df$init.aa!=codon.df$mut.aa,]
+
+  # Focus on region of gene where resistance mutations are known to occur
+  reg.df = full.df[full.df$codon>=cod.frst&full.df$codon<=cod.lst,]
+  
+  # Count transitions
+  full.Ts = sum(full.df$init.bp=="a"&full.df$mut.bp=="g",
+                full.df$init.bp=="g"&full.df$mut.bp=="a",
+                full.df$init.bp=="c"&full.df$mut.bp=="t",
+                full.df$init.bp=="t"&full.df$mut.bp=="c")
+  summary.df$full.Ts.freq[k] = full.Ts/nrow(full.df)
+  summary.df$full.Tv.freq[k] = 1-full.Ts/nrow(full.df)
+  
+  reg.Ts = sum(reg.df$init.bp=="a"&reg.df$mut.bp=="g",
+               reg.df$init.bp=="g"&reg.df$mut.bp=="a",
+               reg.df$init.bp=="c"&reg.df$mut.bp=="t",
+               reg.df$init.bp=="t"&reg.df$mut.bp=="c")
+  summary.df$reg.Ts.freq[k] = reg.Ts/nrow(reg.df)
+  summary.df$reg.Tv.freq[k] = 1-reg.Ts/nrow(reg.df)
+  
+  
+  # Count substitutions by pyrimidine
+  full.CA = sum(full.df$init.bp=="c"&full.df$mut.bp=="a",
+                full.df$init.bp=="g"&full.df$mut.bp=="t")
+  full.CG = sum(full.df$init.bp=="c"&full.df$mut.bp=="g",
+                full.df$init.bp=="g"&full.df$mut.bp=="c")
+  full.CT = sum(full.df$init.bp=="c"&full.df$mut.bp=="t",
+                full.df$init.bp=="g"&full.df$mut.bp=="a")
+  full.TA = sum(full.df$init.bp=="t"&full.df$mut.bp=="a",
+                full.df$init.bp=="a"&full.df$mut.bp=="t")
+  full.TC = sum(full.df$init.bp=="t"&full.df$mut.bp=="c",
+                full.df$init.bp=="a"&full.df$mut.bp=="g")
+  full.TG = sum(full.df$init.bp=="t"&full.df$mut.bp=="g",
+                full.df$init.bp=="a"&full.df$mut.bp=="c")
+  summary.df$full.CA.freq[k] = full.CA/nrow(full.df)
+  summary.df$full.CG.freq[k] = full.CG/nrow(full.df)
+  summary.df$full.CT.freq[k] = full.CT/nrow(full.df)
+  summary.df$full.TA.freq[k] = full.TA/nrow(full.df)
+  summary.df$full.TC.freq[k] = full.TC/nrow(full.df)
+  summary.df$full.TG.freq[k] = full.TG/nrow(full.df)
+  
+  reg.CA = sum(reg.df$init.bp=="c"&reg.df$mut.bp=="a",
+                reg.df$init.bp=="g"&reg.df$mut.bp=="t")
+  reg.CG = sum(reg.df$init.bp=="c"&reg.df$mut.bp=="g",
+                reg.df$init.bp=="g"&reg.df$mut.bp=="c")
+  reg.CT = sum(reg.df$init.bp=="c"&reg.df$mut.bp=="t",
+                reg.df$init.bp=="g"&reg.df$mut.bp=="a")
+  reg.TA = sum(reg.df$init.bp=="t"&reg.df$mut.bp=="a",
+                reg.df$init.bp=="a"&reg.df$mut.bp=="t")
+  reg.TC = sum(reg.df$init.bp=="t"&reg.df$mut.bp=="c",
+                reg.df$init.bp=="a"&reg.df$mut.bp=="g")
+  reg.TG = sum(reg.df$init.bp=="t"&reg.df$mut.bp=="g",
+                reg.df$init.bp=="a"&reg.df$mut.bp=="c")
+  summary.df$reg.CA.freq[k] = reg.CA/nrow(reg.df)
+  summary.df$reg.CG.freq[k] = reg.CG/nrow(reg.df)
+  summary.df$reg.CT.freq[k] = reg.CT/nrow(reg.df)
+  summary.df$reg.TA.freq[k] = reg.TA/nrow(reg.df)
+  summary.df$reg.TC.freq[k] = reg.TC/nrow(reg.df)
+  summary.df$reg.TG.freq[k] = reg.TG/nrow(reg.df)
+  
+}
+
+write.csv(summary.df,"NullModels.csv")
+
+```

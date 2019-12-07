@@ -1,0 +1,18 @@
+drug,mutant,original codon,mut codon,nuc sub,class,frequency
+crizotinib,L1196M,ctg,atg,c>a,ver,14
+crizotinib,G1269A,gga,gca,g>c,ver,9
+crizotinib,G1202R,gga,cga,g>c,ver,2
+crizotinib,S1206Y,tcc,tac,c>a,ver,2
+crizotinib,C1156Y,tgc,tac,g>a,sit,4
+crizotinib,I1171T,atc,acc,t>c,sit,2
+crizotinib,F1174V,ttc,gtc,t>g,ver,1
+crizotinib,L1152R,ctg,cgg,t>g,ver,1
+crizotinib,E1210K,gag,aag,g>a,sit,1
+alectinib,I1171N,atc,aac,t>a,ver,1
+alectinib,V1180L,gtt,ctt,g>c,ver,1
+ceritinib,G1202R,gga,aga,g>a,sit,3
+ceritinib,F1174C,ttc,tgc,t>g,ver,1
+ceritinib,L1196M,ctg,atg,c>a,ver,1
+brigatinib,S1206C,tcc,tgc,c>g,ver,1
+brigatinib,D1203N,gac,aac,g>a,sit,1
+lorlatinib,L1198F,ctc,ttc,c>t,sit,1

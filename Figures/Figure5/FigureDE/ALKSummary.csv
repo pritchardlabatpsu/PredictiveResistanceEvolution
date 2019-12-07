@@ -1,0 +1,10 @@
+mutant,count,freq,init codon,mut codon,nuc sub,class,init 3nuc,pyr sub
+L1152R,1,0.027777778,ctg,cgg,t>g,Tv,,TG
+C1156Y,4,0.111111111,tgc,tac,g>a,Ts,,CT
+I1171T,2,0.055555556,atc,acc,t>c,Ts,,TC
+F1174V,1,0.027777778,ttc,gtc,t>g,Tv,,TG
+L1196M,14,0.388888889,ctg,atg,c>a,Tv,,CA
+G1202R,2,0.055555556,gga,cga,g>c,Tv,,CG
+S1206Y,2,0.055555556,tcc,tac,c>a,Tv,,CA
+E1210K,1,0.027777778,gag,aag,g>a,Ts,,CT
+G1269A,9,0.25,gga,gca,g>c,Tv,,CG

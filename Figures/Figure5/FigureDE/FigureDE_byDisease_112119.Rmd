@@ -1,0 +1,393 @@
+---
+title: "TransitionTransversion2"
+author: "Scott Leighow"
+date: "June 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+setwd("C:/Users/Scott/Box Sync/MutBias/Reresubmit/Figures/Figure6/FigureDE/")
+library(ggplot2)
+library(plotly)
+```
+
+## Import/QC data
+
+```{r}
+
+# AR in PCa
+AR.df = read.csv("ARSummary2.csv",stringsAsFactors=F)
+AR.df$gene = "AR"
+AR.df = AR.df[,c(ncol(AR.df),1:(ncol(AR.df)-1))]
+
+## Remove all multi-step mutations
+AR.df = AR.df[AR.df$mut.codon!="multsub",]
+AR.df$rel.freq = AR.df$freq/sum(AR.df$freq)
+
+# Filter for identifiable transitions/transversions
+AR.TsTv = AR.df[AR.df$class!="?",]
+
+# Filter for identifiable substitutions
+AR.mut = AR.df[AR.df$mut.codon!="?",]
+AR.mut$tri.sub = paste(AR.mut$init.3nuc,AR.mut$pyr.sub,sep=".")
+AR.mut$init.pyr = substr(AR.mut$pyr.sub,1,1)
+
+# ESR1 in BCa
+ESR1.df = read.csv("ESR1Summary.csv",stringsAsFactors=F)
+ESR1.df$gene = "ESR1"
+ESR1.df = ESR1.df[,c(ncol(ESR1.df),1:(ncol(ESR1.df)-1))]
+ESR1.df = ESR1.df[ESR1.df$mut.codon!="multsub",]
+ESR1.df$rel.freq = ESR1.df$freq/sum(ESR1.df$freq)
+
+ESR1.TsTv = ESR1.df[ESR1.df$class!="?",]
+
+ESR1.mut = ESR1.df[ESR1.df$mut.codon!="?",]
+ESR1.mut$tri.sub = paste(ESR1.mut$init.3nuc,ESR1.mut$pyr.sub,sep=".")
+ESR1.mut$init.pyr = substr(ESR1.mut$pyr.sub,1,1)
+
+# KIT in GIST
+KIT.df = read.csv("GISTSummary4.csv",stringsAsFactors=F)
+KIT.df$gene = "KIT"
+KIT.df = KIT.df[,c(ncol(KIT.df),1:(ncol(KIT.df)-1))]
+KIT.df = KIT.df[KIT.df$mut.codon!="multsub",]
+KIT.df$rel.freq = KIT.df$freq/sum(KIT.df$freq)
+
+KIT.TsTv = KIT.df[KIT.df$class!="?",]
+
+KIT.mut = KIT.df[KIT.df$mut.codon!="?",]
+KIT.mut$tri.sub = paste(KIT.mut$init.3nuc,KIT.mut$pyr.sub,sep=".")
+KIT.mut$init.pyr = substr(KIT.mut$pyr.sub,1,1)
+
+# Combine data
+tot.df = rbind(AR.df,ESR1.df,KIT.df)
+tot.df$rel.freq = tot.df$freq/sum(tot.df$freq)
+
+tot.TsTv = rbind(AR.TsTv,ESR1.TsTv,KIT.TsTv)
+tot.TsTv$rel.freq = tot.TsTv$freq/sum(tot.TsTv$freq)
+
+tot.mut = rbind(AR.mut,ESR1.mut,KIT.mut)
+tot.mut$rel.freq = tot.mut$freq/sum(tot.mut$freq)
+
+# ABL - Positive control
+ABL.df = read.csv("ABLSummary2.csv",stringsAsFactors=F)
+ABL.df$gene = "ABL"
+ABL.df = ABL.df[,c(ncol(ABL.df),1:(ncol(ABL.df)-1))]
+ABL.df$rel.freq = ABL.df$freq/sum(ABL.df$freq)
+
+ABL.TsTv = ABL.df[ABL.df$class!="?",]
+
+ABL.mut = ABL.df[ABL.df$mut.codon!="?",]
+
+# ALK - Negative control
+ALK.df = read.csv("ALKSummary.csv",stringsAsFactors=F)
+ALK.df$gene = "ALK"
+ALK.df = ALK.df[,c(ncol(ALK.df),1:(ncol(ALK.df)-1))]
+ALK.df$rel.freq = ALK.df$freq/sum(ALK.df$freq)
+
+ALK.TsTv = ALK.df[ALK.df$class!="?",]
+
+ALK.mut = ALK.df[ALK.df$mut.codon!="?",]
+ALK.mut$tri.sub = paste(ALK.mut$init.3nuc,ALK.mut$pyr.sub,sep=".")
+ALK.mut$init.pyr = substr(ALK.mut$pyr.sub,1,1)
+
+# EGFR - Negative control
+EGFR.df = read.csv("EGFRSummary2.csv",stringsAsFactors=F)
+EGFR.df = EGFR.df[,colnames(EGFR.df)!="drug"]
+EGFR.df$gene = "EGFR"
+EGFR.df = EGFR.df[,c(ncol(EGFR.df),1:(ncol(EGFR.df)-1))]
+EGFR.df$rel.freq = EGFR.df$freq/sum(EGFR.df$freq)
+
+EGFR.TsTv = EGFR.df[EGFR.df$class!="?",]
+
+EGFR.mut = EGFR.df[EGFR.df$mut.codon!="?",]
+EGFR.mut$tri.sub = paste(EGFR.mut$init.3nuc,EGFR.mut$pyr.sub,sep=".")
+EGFR.mut$init.pyr = substr(EGFR.mut$pyr.sub,1,1)
+
+
+# # Remove all multi-step mutations
+# tot.df = tot.df[tot.df$mut.codon!="multsub",]
+# tot.df$rel.freq = tot.df$freq/sum(tot.df$freq)
+# 
+# # Filter for identifiable transitions/transversions
+# tot.TsTv = tot.df[tot.df$class!="?",]
+# 
+# # Filter for identifiable mutations
+# tot.mut = tot.df[tot.df$mut.codon!="?",]
+# tot.mut$tri.sub = paste(tot.mut$init.3nuc,tot.mut$pyr.sub,sep=".")
+# tot.mut$init.pyr = substr(tot.mut$pyr.sub,1,1)
+
+null.model = read.csv("NullModels.csv",stringsAsFactors=F)
+
+```
+
+
+# TsTv Analysis
+```{r}
+
+AT.mut = rbind(AR.TsTv,ESR1.TsTv,KIT.TsTv) # choose gene to analyze
+AT.mut$rel.freq = AT.mut$rel.freq/sum(AT.mut$rel.freq)
+gene = "multiple"
+# gene = c("AR","ESR1","KIT","ALK","EGFR")
+
+n.mut = length(unique(AT.mut$mutant))
+n.pat = sum(AT.mut$count)
+
+# Ts.freq = mean(null.model$full.Ts.freq[null.model$gene%in%gene])
+Ts.freq = .42/1.42 # null model for nonsynonymous substitutions - Stoltzfus 2017
+# Ts.freq = mean(AT.mut$class=="Ts")
+
+
+set.seed(1)
+nsims = 1e4
+TsTv.null = as.data.frame(matrix(nrow=nsims,ncol=2))
+TsTv = c("Ts","Tv")
+colnames(TsTv.null) = TsTv
+
+temp.df = AT.mut[,c("class","rel.freq")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$rel.freq,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$rel.freq>0,],aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Observed Resistance Allele Distribution: ",gene,sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$class = sample(TsTv,nrow(temp.df),replace=T,prob=c(Ts.freq,1-Ts.freq)) # sample according to null distribution
+  
+  for (j in 1:length(TsTv)) {
+    
+    TsTv.null[i,j] = sum(temp.df$rel.freq[temp.df$class==TsTv[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$rel.freq,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$rel.freq>0,],aes(x=x,y=rel.freq))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# ggsave("TotResNullDist.png",width=6.5,height=6)
+
+# calculate empirical p-value
+
+Ts.obs = sum(AT.mut$rel.freq[AT.mut$class=="Ts"])
+Ts.null = TsTv.null$Ts
+p.val = mean(TsTv.null$Ts>Ts.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(Ts.null),bins=25,fill="#4286f4")+
+  geom_segment(aes(x=Ts.obs,xend=Ts.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=Ts.obs,y=550,label=paste("Observed:",round(Ts.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Transition/Transversion Null Model: ",gene,sep=""))+
+  xlab("Transitions")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+n.mut
+n.pat
+p.val
+
+```
+
+# Pyrimidine Substitution Analysis
+
+```{r}
+
+# choose gene
+AT.mut = rbind(AR.mut,KIT.mut,ESR1.mut,EGFR.mut)
+gene = "multiple"
+
+AT.mut$count = AT.mut$rel.freq/sum(AT.mut$rel.freq)
+
+pyr.subs = c("CA","CG","CT","TA","TC","TG")
+
+# CA = null.model$full.CA.freq[null.model$gene==gene]
+# CG = null.model$full.CG.freq[null.model$gene==gene]
+# CT = null.model$full.CT.freq[null.model$gene==gene]
+# TA = null.model$full.TA.freq[null.model$gene==gene]
+# TC = null.model$full.TC.freq[null.model$gene==gene]
+# TG = null.model$full.TC.freq[null.model$gene==gene]
+# 
+# weights = c(CA,CG,CT,TA,TC,TG)
+weights = rep(1,6)
+
+set.seed(1)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.subs
+
+temp.df = AT.mut[,c("pyr.sub","count")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.subs,nrow(temp.df),replace=T,prob=weights)
+  
+  for (j in 1:length(pyr.subs)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$count[temp.df$pyr.sub==pyr.subs[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = vector(length=length(pyr.subs))
+names(pyr.obs) = pyr.subs
+for (i in 1:length(pyr.obs)) {
+  pyr.obs[i] = sum(AT.mut$count[AT.mut$pyr.sub==names(pyr.obs)[i]])
+}
+
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=550,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Null Model Pyrmidine Substitution: ",gene,sep=""))+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+
+pca = prcomp(rbind(pyr.mat,pyr.obs[1:5]),scale=F)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC3),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+n.mut
+n.pat
+p.val
+
+```
+
+## Plot forward selection
+
+```{r}
+
+fwd.slct = data.frame(K=1:5,
+                  p.val=c(0.32,0.12,0.045,0.2,0.43))
+
+ggplot(fwd.slct,aes(x=K,y=p.val))+theme_bw()+
+  geom_line(color="dark green",size=2)+
+  geom_point(color="dark green",size=5)+
+  xlab("Best K Disease Model")+ylab("Empirical P-value")+
+  ggtitle("Forward Selection of\nDiseases Included in Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )+
+  ylim(0,0.5)
+# ggsave("ForwardDiseaseSelection.png",width=6,height=4)
+
+```

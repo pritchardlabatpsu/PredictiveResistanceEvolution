@@ -1,0 +1,484 @@
+---
+title: "StoltzfusSims"
+author: "Scott Leighow"
+date: "November 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+
+library(ggplot2)
+
+setwd("C:/Users/Scott/Box Sync/MutBias/Reresubmit/ResponseToReviewers/StoltzfusSims/")
+```
+
+## Import parameters
+
+```{r}
+
+sim.pars = read.csv("ATParameters113019.csv",header=F)
+colnames(sim.pars) = c("rho","alpha")
+
+pyr.subs = read.csv("PyrSubs113019.csv",header=F,stringsAsFactors=F)
+pyr.subs = paste(pyr.subs$V1,pyr.subs$V2,sep="")
+n = length(pyr.subs)
+
+pyr.vec = c("CA","CG","CT","TA","TC","TG")
+
+```
+
+## Analyze simulations
+
+```{r}
+
+sims.wbias = read.csv("ATSims_WBias_113019.csv",header=F)
+tbl.wbias = table(sims.wbias$V1)
+tbl.wbias = tbl.wbias[as.character(0:n)]
+names(tbl.wbias) = 0:n
+tbl.wbias[is.na(tbl.wbias)]=0
+sum.wbias = data.frame(allele=0:n,bias=T,count=as.vector(tbl.wbias),pyr.sub=c(NA,pyr.subs))
+sum.wbias = sum.wbias[sum.wbias$allele>0,]
+sum.wbias$class="Tv"
+sum.wbias$class[sum.wbias$pyr.sub%in%c("CT","TC")]="Ts"
+
+sims.wobias = read.csv("ATSims_WoBias_113019.csv",header=F)
+tbl.wobias = table(sims.wobias$V1)
+tbl.wobias = tbl.wobias[as.character(0:n)]
+names(tbl.wobias) = 0:n
+tbl.wobias[is.na(tbl.wobias)]=0
+sum.wobias = data.frame(allele=0:n,bias=F,count=as.vector(tbl.wobias),pyr.sub=c(NA,pyr.subs))
+sum.wobias = sum.wobias[sum.wobias$allele>0,]
+sum.wobias$class="Tv"
+sum.wobias$class[sum.wobias$pyr.sub%in%c("CT","TC")]="Ts"
+
+```
+
+## Transition/Transversion - With Bias
+
+```{r}
+
+gene = "With Bias"
+weights = rep(1,6)
+
+
+set.seed(5)
+nsims = 1e4
+TsTv.null = as.data.frame(matrix(nrow=nsims,ncol=2))
+TsTv = c("Ts","Tv")
+colnames(TsTv.null) = TsTv
+
+temp.df = sum.wbias[,c("class","count")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Observed Resistance Allele Distribution: ",gene,sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$class = sample(TsTv,nrow(temp.df),replace=T,prob=c(1/3,2/3)) # sample according to null distribution
+  
+  for (j in 1:length(TsTv)) {
+    
+    TsTv.null[i,j] = sum(temp.df$count[temp.df$class==TsTv[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# calculate empirical p-value
+
+Ts.obs = sum(sum.wbias$count[sum.wbias$class=="Ts"])
+Ts.null = TsTv.null$Ts
+p.val = mean(TsTv.null$Ts>Ts.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(Ts.null),bins=25,fill="#4286f4")+
+  geom_segment(aes(x=Ts.obs,xend=Ts.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=Ts.obs,y=550,label=paste("Observed:",round(Ts.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Transition/Transversion Null Model:\n",gene,sep=""))+
+  xlab("Transitions")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+```
+
+## Transition/Transversion - Without Bias
+
+```{r}
+
+gene = "Without Bias"
+weights = rep(1,6)
+
+set.seed(5)
+nsims = 1e4
+TsTv.null = as.data.frame(matrix(nrow=nsims,ncol=2))
+TsTv = c("Ts","Tv")
+colnames(TsTv.null) = TsTv
+
+temp.df = sum.wobias[,c("class","count")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Observed Resistance Allele Distribution: ",gene,sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$class = sample(TsTv,nrow(temp.df),replace=T,prob=c(1/3,2/3)) # sample according to null distribution
+  
+  for (j in 1:length(TsTv)) {
+    
+    TsTv.null[i,j] = sum(temp.df$count[temp.df$class==TsTv[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=class),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Substitution Class",labels=c("Transition","Transversion"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# calculate empirical p-value
+
+Ts.obs = sum(sum.wobias$count[sum.wobias$class=="Ts"])
+Ts.null = TsTv.null$Ts
+p.val = mean(TsTv.null$Ts>Ts.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(Ts.null),bins=25,fill="#4286f4")+
+  geom_segment(aes(x=Ts.obs,xend=Ts.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=Ts.obs,y=550,label=paste("Observed:",round(Ts.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Transition/Transversion Null Model:\n ",gene,sep=""))+
+  xlab("Transitions")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+```
+
+## 6 Pyrmidine Substitution - With Bias
+
+```{r}
+
+gene = "With Bias"
+weights = rep(1,6)
+
+set.seed(5)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.vec
+
+temp.df = sum.wbias[,c("pyr.sub","count")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.vec,nrow(temp.df),replace=T,prob=weights)
+  
+  for (j in 1:length(pyr.vec)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$count[temp.df$pyr.sub==pyr.vec[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = vector(length=length(pyr.vec))
+names(pyr.obs) = pyr.vec
+for (i in 1:length(pyr.obs)) {
+  pyr.obs[i] = sum(sum.wbias$count[sum.wbias$pyr.sub==names(pyr.obs)[i]])
+}
+
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=550,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Null Model Pyrmidine Substitution: ",gene,sep=""))+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+
+pca = prcomp(rbind(pyr.mat,pyr.obs[1:5]),scale=F)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC3),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+
+```
+
+## 6 Pyrmidine Substitution - With Bias
+
+```{r}
+
+gene = "Without Bias"
+weights = rep(1,6)
+
+set.seed(5)
+nsims = 1e4
+pyr.sub.null = as.data.frame(matrix(nrow=nsims,ncol=6))
+colnames(pyr.sub.null) = pyr.vec
+
+temp.df = sum.wobias[,c("pyr.sub","count")]
+
+# plot observed distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+# reassign and tally
+for (i in 1:nsims) {
+  
+  temp.df$pyr.sub = sample(pyr.vec,nrow(temp.df),replace=T,prob=weights)
+  
+  for (j in 1:length(pyr.vec)) {
+    
+    pyr.sub.null[i,j] = sum(temp.df$count[temp.df$pyr.sub==pyr.vec[j]])
+    
+  }
+  
+}
+
+# plot a simulated distribution
+temp.df.r = temp.df[order(temp.df$count,decreasing=T),]
+temp.df.r$x = 1:nrow(temp.df.r)
+ggplot(temp.df.r[temp.df.r$count>0,],aes(x=x,y=count))+theme_bw()+
+  geom_bar(aes(fill=pyr.sub),stat="identity")+
+  scale_x_continuous(labels=c())+
+  scale_fill_discrete("Pyrmidine\nSubstitutions",labels=c("C>A","C>G","C>T","T>A","T>C","T>G"))+
+  ggtitle(paste("Resistance Allele Distribution: ",gene,"\nNull Model Simulation Example",sep=""))+
+  xlab("Resistance Variants")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16),
+    legend.title=element_text(size=22,face="bold"),
+    legend.title.align=0.5,
+    legend.text=element_text(size=22,face="bold"),
+    legend.position=c(0.6,0.6),
+    legend.background = element_rect(fill=alpha("gray85",0.5))
+  )+
+  guides(
+    fill=guide_legend(nrow=3)
+  )
+
+
+# calculate mahalanobis dist
+
+pyr.mat = as.matrix(pyr.sub.null[1:5])
+D2 = mahalanobis(pyr.mat,colMeans(pyr.mat),cov(pyr.mat))
+
+pyr.obs = vector(length=length(pyr.vec))
+names(pyr.obs) = pyr.vec
+for (i in 1:length(pyr.obs)) {
+  pyr.obs[i] = sum(sum.wobias$count[sum.wobias$pyr.sub==names(pyr.obs)[i]])
+}
+
+D2.obs = mahalanobis(pyr.obs[1:5],colMeans(pyr.mat),cov(pyr.mat))
+
+p.val = mean(D2>=D2.obs)
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(D2),bins=50,fill="#4286f4")+
+  geom_segment(aes(x=D2.obs,xend=D2.obs,y=450,yend=70),color="red",arrow = arrow(length = unit(0.5,"cm")),size=2)+
+  geom_text(aes(x=D2.obs,y=550,label=paste("Observed:",round(D2.obs,2),"\np-value =",round(p.val,3))),size=8,fontface="bold",color="red")+
+  ggtitle(paste("Null Model Pyrmidine Substitution: ",gene,sep=""))+
+  xlab("Mahalanobis Distance")+ylab("Frequency")+
+  theme(
+    plot.title=element_text(size=24,face="bold",hjust=0.5),
+    axis.title=element_text(size=22,face="bold"),
+    axis.text=element_text(size=16)
+  )
+
+
+pca = prcomp(rbind(pyr.mat,pyr.obs[1:5]),scale=F)
+pca.obs = predict(pca,newdata = t(data.frame(pyr.obs[1:5])))
+
+pca.df = as.data.frame(pca$x)
+ggplot(pca.df)+theme_bw()+
+  geom_point(aes(PC1,PC3),color="gray50",size=3,alpha=0.4)+
+  geom_point(aes(pca.obs[1],pca.obs[2]),color="red",size=4)+
+  xlab("Principle Component 1")+ylab("Principle Component 2")+
+  ggtitle("Principle Component Analysis")+
+  theme(
+    plot.title=element_text(size=20,face="bold",hjust=0.5),
+    axis.title=element_text(size=18,face="bold"),
+    axis.text=element_text(size=16)
+  )
+ggs
+
+```

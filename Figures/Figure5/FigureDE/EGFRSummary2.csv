@@ -1,0 +1,6 @@
+drug,mutant,count,freq,init codon,mut codon,nuc sub,class,init 3nuc,pyr sub
+erlotinib/gefitinib,L747S,4,0.015384615,tta,tca,t>c,Ts,TTA,TC
+erlotinib/gefitinib,D761Y,3,0.011538462,gat,tat,g>t,Tv,TCG,CA
+erlotinib/gefitinib,T790M,246,0.946153846,acg,atg,c>t,Ts,ACG,CT
+erlotinib/gefitinib,T854A,1,0.003846154,aca,gca,a>g,Ts,GTG,TC
+osimertinib,C797S,6,0.023076923,tgc,tcc,g>c,Tv,GCA,CG

@@ -1,0 +1,5 @@
+mutant,count,freq,init codon,mut codon,nuc sub,class,init 3nuc,pyr sub
+L747S,4,0.012012012,tta,tca,t>c,Ts,TTA,TC
+D761Y,3,0.009009009,gat,tat,g>t,Tv,TCG,CA
+T790M,325,0.975975976,acg,atg,c>t,Ts,ACG,CT
+T854A,1,0.003003003,aca,gca,a>g,Ts,GTG,TC
